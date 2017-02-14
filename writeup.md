@@ -258,9 +258,9 @@ The first entry definitely looks like some sort of key, maybe this is what is re
 So now with some possible leads from `strings` we can start in on the decompile. There are several great tools that could be used to decompile this, but by far the most powerful is [IDA](https://www.hex-rays.com/index.shtml). The license for IDA runs about $500, but Hex-Rays offers a very full featured [freeware version](https://www.hex-rays.com/products/ida/support/download_freeware.shtml) and a [demo version](https://www.hex-rays.com/products/ida/support/download_demo.shtml). Either free download will be sufficient for decompiling this library. 
 
 ##getSecretKey
-Here is the disassembly of [`getSecretKey`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L2)
+Here is the disassembly of [`getSecretKey`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L2)
 
-Opening `libsecurity.so` in IDA presents us with a somewhat intimidating interface, but with a little use it becomes pretty intuitive. In the Functions window it lists several standard library functions, several unnamed subroutines, and 2 functions with very familiar names `Java_io_casper_android_security_Security_getSecretKey` and `Java_io_casper_io_android_security_Security_getVerificationToken`. Double-clicking on one of these will navigate us to it within the decompiled view. You can find the full decompiled program [here](https://www.github.com/casperreverser/casperapi/disassembly.asm) if you want to follow along.
+Opening `libsecurity.so` in IDA presents us with a somewhat intimidating interface, but with a little use it becomes pretty intuitive. In the Functions window it lists several standard library functions, several unnamed subroutines, and 2 functions with very familiar names `Java_io_casper_android_security_Security_getSecretKey` and `Java_io_casper_io_android_security_Security_getVerificationToken`. Double-clicking on one of these will navigate us to it within the decompiled view. You can find the full decompiled program [here](https://www.github.com/casperreverser/CasperReverse/disassembly.asm) if you want to follow along.
 
 It's not exactly clear by just glancing at this code what is happening, but it does clearly involve the key which was found in `strings`. One could probably guess what it's doing, but the only way to be 100% sure is to step through it. 
 
@@ -379,7 +379,7 @@ So this calls the function `NewStringUTF(env, dest)`, making a new `jstring` fro
 In other words `getSecretKey` just returns the string `c789742f186a167dd73e59b1ce3d4873`!
 
 ##getVerificationToken
-Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L68)
+Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L68)
 
 I guess it could be said I've saved the best for last... this one is a doozy, but once you break it down it's not too bad at all. I've linked to the dumped assembly of `getVerificationToken`, it might help to glance at it quickly.
 
@@ -388,7 +388,7 @@ Those reading closely will notice that this calls several subroutines in its exe
 In order to understand this function on the whole, you'll need to understand these subroutines, so that's where we'll start.
 
 ###sub_9B0
-Here is the disassembly of [`sub_9B0`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L495)
+Here is the disassembly of [`sub_9B0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L495)
 
 So there's quite a lot here, but it actually breaks down fairly easily. At a glance you may notice there are a lot of structures which look like the JNI calls from above. The good news about this is we know it's fairly easy to deconstruct these JNI calls by using the index in their function table.
 
@@ -438,7 +438,7 @@ In otherwords, this entire block of assembly just calls `context.getPackageName(
 
 
 ###sub_740
-Here is the disassembly of [`sub_740`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L276)
+Here is the disassembly of [`sub_740`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L276)
 
 As with `sub_9B0` this function looks daunting, but it breaks down easily as well. I'm simply going to re-write it in C for brevity.
 ```C
@@ -468,7 +468,7 @@ void* sub_740(JNIEnv* env, jobject s){
 So `sub_740` is actually defined as something like `char* getBytes(JNIEnv* env, jString s)`
 
 ###sub_CA0
-Here is the disassembly of [`sub_CA0`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L716)
+Here is the disassembly of [`sub_CA0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L716)
 
 Only 2 more functions to go! 
 ```C
@@ -516,7 +516,7 @@ So `sub_CA0` returns the android package's signature. Its signature could be rew
 
 
 ###sub_13C0
-Here is the disassembly for [`sub_13C0`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L1208)
+Here is the disassembly for [`sub_13C0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L1208)
 
 Alright, last one, it's not too bad. Once again, I'll just rewrite it in C
 ```C
@@ -538,7 +538,7 @@ void * sub_13c0(JNIEnv* env, char* s){
 So this function simply calculates the md5 of the string passed. It's signature would be `char* getMD5(JNIEnv* env, char* s);`
 
 ###Back to getVerificationToken
-Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/casperapi/blob/master/disassembly.asm#L68)
+Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L68)
 
 Now that we have the subroutines translated into C we can start workign on `getVerificationToken`. I've included a table of the subroutines to their C signatures
 
