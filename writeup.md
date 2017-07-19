@@ -1,6 +1,6 @@
-#Casper API Reverse Engineering
+# Casper API Reverse Engineering
 
-#Table of Contents
+# Table of Contents
 * [Background](#background)
 * [Package Capture](#where-to-start)
 * [Java Decompiling](#now-what)
@@ -17,15 +17,15 @@
 * [Duplicating the Signing](#tying-it-all-together)
 
 
-#Some Background
+# Some Background
 
 If you don't care about this and just want to get to the reversing click [here](#where-to-start).
 
-Snapchat is one of the most popular social media platforms available right now. Until a few years ago, their private API was also one of the least secure. It was trivial to reverse engineer and there were several people who did it successfully, most notably tlack with [SnapHax] (https://github.com/tlack/snaphax). Snapchat initially retaliated with legal action, [threatening ](https://news.ycombinator.com/item?id=6083812) to sue tlack for his usage of the API (under [DMCA 1201](https://www.law.cornell.edu/uscode/text/17/1201)). It appears nothing ever came of the lawsuit, but Snapchat did eventually update their security. 
+Snapchat is one of the most popular social media platforms available right now. Until a few years ago, their private API was also one of the least secure. It was trivial to reverse engineer and there were several people who did it successfully, most notably tlack with [SnapHax](https://github.com/tlack/snaphax). Snapchat initially retaliated with legal action, [threatening ](https://news.ycombinator.com/item?id=6083812) to sue tlack for his usage of the API (under [DMCA 1201](https://www.law.cornell.edu/uscode/text/17/1201)). It appears nothing ever came of the lawsuit, but Snapchat did eventually update their security. 
 
 After Snapchat's security update their API apparently became much more difficult to reverse. The number of working 3rd party apps plumetted due to their increased security. In May of 2015 the first version of [Casper](https://casper.io) was released. This gave a new option to those who were frustrated with the standard Snapchat client and wanted more features. The developer of Casper, [Liam Cottle](liamcottle.com) decided to keep his findings about the reversing of Snapchat to himself. Considering Snapchat's past reactions to 3rd party applications this is reasonable. 
 
-Liam implemented his API by creating a service which generated request tokens for his users to authenticate their requests with Snapchat. Liam's service utilized its own authentication system to verify that the users of his service were valid and from Casper. Liam's authentication was significantly weaker than that which Casper had implemented and was quickly broken, giving developers full programmatic access to Snapchat once again, albeit through Liam's service. 
+Liam implemented his API by creating a service which generated request tokens for his users to authenticate their requests with Snapchat. Liam's service utilized its own authentication system to verify that the users of his service were valid and from Casper. Liam's authentication was significantly weaker than that which Snapchat had implemented and was quickly broken, giving developers full programmatic access to Snapchat once again, albeit through Liam's service. 
 
 After multiple different projects started using Casper for their own means, Liam decided that an increase in security was called for. In a swift movement Liam added a verification token and signature to all of the incoming Casper requests. This stopped most of the applications which had gained access to Liam's service. Shortly after increasing his security Liam added an option for API access to his Snapchat authentication service. The pricing structure of this API is listed below and on his [developers page](http://developers.casper.io/pricing.php):
 
@@ -40,7 +40,7 @@ These prices seem outrageous! For a small development team, or someone who just 
 
 The Casper app produced by Liam still provides its users with free access to his API, so there must be some means to reverse engineer this and gain access for another app. 
 
-#Where to Start?
+# Where to Start?  
 As with most any network API, the first step is to monitor network traffic. So using Burp Suite I started up the proxy and installed its CA cert onto my Android phone, then just started using Casper. Here is a sample login request to Casper (with username/password and API Key changed)
 
 Login Request
@@ -85,8 +85,8 @@ Content-Length: 1561
 
 As you can see, this request goes to Liam's server and returns a JSON which contains the headers and parameters to send to Snapchat's servers to perform a login. Each time this request is performed the `X-Casper-Timestamp`, `X-Casper-Signature`, and `X-Casper-Private-Token` headers change value. The timestamp header is obvious, but the other two are more interesting. As you continue to navigate through the app, there are several other requests performed, but only one other seems to relate to Snapchat `/ios/snapchat/endpointauth`, the rest seem to be Casper internal. This request also contains the verification headers. Simply trying to re-submit these requests with a different username/password fails and Liam's server threatens to have your account "permenantly banned".
 
-#Now What?
-Since simply inspecting the network traffic doesn't yield any obvious ways around the verification, the next step must be to decompile his APK. So hop on over to [casper.io](https://casper.io) and download it. Then extract the files from it (APKs are just ZIPs) and you'll get a file called `classes.dex`. This is how Android stores its Java class files. The best tool for accessing these is [dex2jar](https://github.com/pxb1988/dex2jar) by pxb1988. Running `d2j-dex2jar.sh classes.dex` will give you a file called `classes-dex2jar.jar` which can be opened by a standard Java decompiler, my personal choice is [jd-gui] (http://jd.benow.ca/). 
+# Now What?
+Since simply inspecting the network traffic doesn't yield any obvious ways around the verification, the next step must be to decompile his APK. So hop on over to [casper.io](https://casper.io) and download it. Then extract the files from it (APKs are just ZIPs) and you'll get a file called `classes.dex`. This is how Android stores its Java class files. The best tool for accessing these is [dex2jar](https://github.com/pxb1988/dex2jar) by pxb1988. Running `d2j-dex2jar.sh classes.dex` will give you a file called `classes-dex2jar.jar` which can be opened by a standard Java decompiler, my personal choice is [jd-gui](http://jd.benow.ca/). 
 
 At a glance it's clear to see that nearly all of the files within the `io.casper.android` package are obfuscated, this complicates things a little bit. However, with a little more investigation it's clear there are a few exceptions to this rule, most notably `io.casper.android.security.Security`. This class has several obfuscated methods within it which make calls to the 2 native methods included. These native methods are `String getSecretKey()` and `String getVerificationToken(Context, String)`. Well that's certaintly  something interesting! 
 
@@ -94,7 +94,7 @@ The 2 methods which call them are `String a(TreeMap<String, String>)` which call
 
 Reading through `makeSecret` makes it fairly clear what it does. Here is `makeSecret` reproduced and what it does
 
-###Original
+### Original
 ```java
   public static String a(TreeMap<String, String> paramTreeMap)
   {
@@ -123,30 +123,30 @@ Reading through `makeSecret` makes it fairly clear what it does. Here is `makeSe
     }
   }
 ``` 
-###Rewritten
+### Rewritten
 ```java 
-	public static String makeSecret(TreeMap<String, String> map)
-	{
-		String entries="";
-		for(Map.Entry<String,String> e: map.entrySet()){
-			//append all the entries in the map into a long string
-			entries+= e.getKey() + e.getValue();
-		}
-		//from the method `SecretKeySpec a()`
-		SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(getSecretKey().getBytes("utf-8"), "HmacSHA256");
-		//from the method `io.casper.android.util.CryptoUtil.getMac(String)`
-		Mac m = Mac.getInstance("HmacSHA256");
-		m.init(key);
-		//bytesToHex is a simple helper method which converts a byte[] to a string of hex digits
-		String ret = "v1:" + bytesToHex(m.doFinal(entries.getBytes("UTF-8")));
-		return ret;
-	}
+    public static String makeSecret(TreeMap<String, String> map)
+    {
+        String entries="";
+        for(Map.Entry<String,String> e: map.entrySet()){
+            //append all the entries in the map into a long string
+            entries+= e.getKey() + e.getValue();
+        }
+        //from the method `SecretKeySpec a()`
+        SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(getSecretKey().getBytes("utf-8"), "HmacSHA256");
+        //from the method `io.casper.android.util.CryptoUtil.getMac(String)`
+        Mac m = Mac.getInstance("HmacSHA256");
+        m.init(key);
+        //bytesToHex is a simple helper method which converts a byte[] to a string of hex digits
+        String ret = "v1:" + bytesToHex(m.doFinal(entries.getBytes("UTF-8")));
+        return ret;
+    }
 ```
 
 The most interesting part of this to me is the String `"v1:"`. This is part of the headers which are sent to Casper in requests! This method is clearly somehow related to the verification headers.
 
 Looking at the other method makes some more things clear 
-###Original
+### Original
 ```java
   public static String a(Context paramContext, String paramString1, String paramString2, TreeMap<String, String> paramTreeMap)
   {
@@ -178,29 +178,29 @@ Looking at the other method makes some more things clear
     }
   }
 ```
-###Rewritten
+### Rewritten
 ```java
-	public static String makeVerification(Context context, String s1, String s2, TreeMap<String,String> map)
-	{
-		String entries = s1;
-		for(Map.Entry<String,String> e: map.entrySet()){
-			//append all the entries in the map into a long string
-			entries += e.getKey() + e.getValue();
-		}			
-		//from the method `SecretKeySpec a()`
-		SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(getSecretKey().getBytes("utf-8"), "HmacSHA256");
-		//from CryptoUtil
-		Mac m = Mac.getInstance("HmacSHA256");
-		String verificationToken = getVerificationToken(context, s2);
-		m.init(key);
-		String ret = "v1:" + verificationToken + ":" + bytesToHex(m.doFinal(entries.getBytes("UTF-8")));
-		return ret;
-	}
+    public static String makeVerification(Context context, String s1, String s2, TreeMap<String,String> map)
+    {
+        String entries = s1;
+        for(Map.Entry<String,String> e: map.entrySet()){
+            //append all the entries in the map into a long string
+            entries += e.getKey() + e.getValue();
+        }           
+        //from the method `SecretKeySpec a()`
+        SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(getSecretKey().getBytes("utf-8"), "HmacSHA256");
+        //from CryptoUtil
+        Mac m = Mac.getInstance("HmacSHA256");
+        String verificationToken = getVerificationToken(context, s2);
+        m.init(key);
+        String ret = "v1:" + verificationToken + ":" + bytesToHex(m.doFinal(entries.getBytes("UTF-8")));
+        return ret;
+    }
 ```
 
 This method has a very similar structure to `makeSecret`! The only differences are the inclusion of the `verificationToken` and the addition of `s1` to the front of `entries`. It also identifes the other verification header! Since this method uses `"v1:"` as well, but it also includes a second `":"` within the string. This must be the method to get the `X-Casper-Signature` header and the other must get the `X-Casper-Private-Token` header! From now on I'll call `makeSecret` `getSignature()` and `makeVerification` `getPrivateToken`.
 
-#What's the use?
+# What's the use?
 So we have these native methods, but we don't know what arguments are passed to them or what the `getSecretKey` or `getVerificationToken` methods actually do. The next step is to see where the `Security.a` methods are called from in case that provides some more details about the mystery parameters. Thankfully, the `Security` class is only referenced in one other class `io.casper.c.b.a.a.a`. With some investigation into this class it can be seen that it helps handle Requests to the Casper API (based on the import of `okhttp` and the string `"User-Agent"`). 
 
 Reading through this class, the method `f()` seems to be the one calling the Security methods. In a stroke of luck, jd-gui was able to identify these parameters' values and provide information about them. Here is the code from the class
@@ -221,7 +221,7 @@ Opening it from `c.b.a.a.a` shows there are many subclasses. Opening several at 
 ```java
 public String a()
 {
-	return "/snapchat/ios/endpointauth";
+    return "/snapchat/ios/endpointauth";
 }
 ```
 So the method `String a()` simply returns the path of the HTTP request.
@@ -236,7 +236,7 @@ String getSignature(TreeMap<String,String> formParameters);
 String getPrivateToken(Context context, String path, String timestamp, TreeMap<String,String> formParameters);
 ```
 
-#But what about the native methods?
+# But what about the native methods?
 //TODO Consider a part 2... this is already long
 
 With the full knowledge of how the two `Security` methods are called, the only thing remaining is the function of the native methods `getSecretKey` and `getVerificationToken`. These methods are frontends for native library methods which lie within the library `security`. Within the extracted APK there are several files within the path `/lib/`. I chose to use the one in `x86` for decompiling.
@@ -257,7 +257,7 @@ The first entry definitely looks like some sort of key, maybe this is what is re
 
 So now with some possible leads from `strings` we can start in on the decompile. There are several great tools that could be used to decompile this, but by far the most powerful is [IDA](https://www.hex-rays.com/index.shtml). The license for IDA runs about $500, but Hex-Rays offers a very full featured [freeware version](https://www.hex-rays.com/products/ida/support/download_freeware.shtml) and a [demo version](https://www.hex-rays.com/products/ida/support/download_demo.shtml). Either free download will be sufficient for decompiling this library. 
 
-##getSecretKey
+## getSecretKey
 Here is the disassembly of [`getSecretKey`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L2)
 
 Opening `libsecurity.so` in IDA presents us with a somewhat intimidating interface, but with a little use it becomes pretty intuitive. In the Functions window it lists several standard library functions, several unnamed subroutines, and 2 functions with very familiar names `Java_io_casper_android_security_Security_getSecretKey` and `Java_io_casper_io_android_security_Security_getVerificationToken`. Double-clicking on one of these will navigate us to it within the decompiled view. You can find the full decompiled program [here](https://www.github.com/casperreverser/CasperReverse/disassembly.asm) if you want to follow along.
@@ -299,8 +299,8 @@ JNIEXPORT void JNICALL Java_HelloWorld_print
 JNIEXPORT void JNICALL
 Java_HelloWorld_print(JNIEnv *env, jobject obj)
 {
-	 printf("Hello World!\n");
-	 return;
+     printf("Hello World!\n");
+     return;
 }
 ```
 
@@ -345,9 +345,9 @@ Once again, these two variables can be renamed to make it easier to follow their
 The next few lines copy the `dest`, string, and length onto the stack, preparing for a method call
 ```Assembly
 mov ecx, esi
-mov [esp], ecx		;destination
-mov [esp+4], edi	;source
-mov [esp+8], 21h	;length
+mov [esp], ecx      ;destination
+mov [esp+4], edi    ;source
+mov [esp+8], 21h    ;length
 ```
 The next 3 lines aren't actually important to the execution of the funcion, so I'll ignore them (plus I'm not entirely sure why they're there). Following that is a call to the standard library function `memcpy` using the parameters we just put on the stack
 
@@ -378,7 +378,7 @@ So this calls the function `NewStringUTF(env, dest)`, making a new `jstring` fro
 
 In other words `getSecretKey` just returns the string `c789742f186a167dd73e59b1ce3d4873`!
 
-##getVerificationToken
+## getVerificationToken
 Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L68)
 
 I guess it could be said I've saved the best for last... this one is a doozy, but once you break it down it's not too bad at all. I've linked to the dumped assembly of `getVerificationToken`, it might help to glance at it quickly.
@@ -387,7 +387,7 @@ Those reading closely will notice that this calls several subroutines in its exe
 
 In order to understand this function on the whole, you'll need to understand these subroutines, so that's where we'll start.
 
-###sub_9B0
+### sub_9B0
 Here is the disassembly of [`sub_9B0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L495)
 
 So there's quite a lot here, but it actually breaks down fairly easily. At a glance you may notice there are a lot of structures which look like the JNI calls from above. The good news about this is we know it's fairly easy to deconstruct these JNI calls by using the index in their function table.
@@ -404,7 +404,7 @@ So this simply collects several strings from memory and copies them locally. Rig
 After this call, there is some quick error handling which checks if the result is non-zero, in C this reads
 ```C
 if(getPackManager == 0){
-	return 0;
+    return 0;
 }
 ```
 After this there is yet another JNI call, this one to `CallObjectMethod`. `jobject packageManager = JNIEnv -> CallObjectMethod(JNIEnv, context, getPackManager)`. There is more error handling, then some more strings are loaded from memory. Note: getPackageName is directly copied in assembly instead of using memcpy
@@ -418,126 +418,126 @@ After the strings are copied, there is yet another JNI call, another one to `Get
 If `sub_9B0` were rewritten in C it would look like this
 ```C
 void* sub_9B0(JNIEnv* env, jobject context){
-	jclass contextWrapperClass = env -> FindClass(env, "android/content/ContextWrapper");
-	jmethodID getPackManId = env -> GetMethodID(env, contextWrapperClass, "getPackageManager", "()Landroid/content/pm/PackageManager");
-	if(!getPackManId){
-		return 0;
-	}
-	jobject packageManager = env -> CallObjectMethod(env, context, getPackManId);
-	if(!packageManager){
-		return 0;
-	}
+    jclass contextWrapperClass = env -> FindClass(env, "android/content/ContextWrapper");
+    jmethodID getPackManId = env -> GetMethodID(env, contextWrapperClass, "getPackageManager", "()Landroid/content/pm/PackageManager");
+    if(!getPackManId){
+        return 0;
+    }
+    jobject packageManager = env -> CallObjectMethod(env, context, getPackManId);
+    if(!packageManager){
+        return 0;
+    }
 
-	jmethodID getPackNameId = env -> GetMethodID(env, contextWrapperClass, "getPackageName", "()Ljava/lang/String");
-	jobject packageName = env -> CallObjectMethod(env, context, getPackNameId); 
-	return packageName;
+    jmethodID getPackNameId = env -> GetMethodID(env, contextWrapperClass, "getPackageName", "()Ljava/lang/String");
+    jobject packageName = env -> CallObjectMethod(env, context, getPackNameId); 
+    return packageName;
 }
 ```
 
 In otherwords, this entire block of assembly just calls `context.getPackageName()`! `sub_9B0` can simply be defined as `jString getPackageName(JNIEnv* env, Context context)`.
 
 
-###sub_740
+### sub_740
 Here is the disassembly of [`sub_740`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L276)
 
 As with `sub_9B0` this function looks daunting, but it breaks down easily as well. I'm simply going to re-write it in C for brevity.
 ```C
 void* sub_740(JNIEnv* env, jobject s){
-	jstring utf8 = env -> NewStringUTF(env, "utf-8");
-	jclass stringClass = env -> FindClass(env, "java/lang/String");
-	jmethodID getBytesId = env -> GetMethodID(env, stringClass, "getBytes", "(Ljava/lang/String;)[B");
-	jobject java_bytes = env -> CallObjectMethod(env, s, getBytesId, utf8);
+    jstring utf8 = env -> NewStringUTF(env, "utf-8");
+    jclass stringClass = env -> FindClass(env, "java/lang/String");
+    jmethodID getBytesId = env -> GetMethodID(env, stringClass, "getBytes", "(Ljava/lang/String;)[B");
+    jobject java_bytes = env -> CallObjectMethod(env, s, getBytesId, utf8);
 
-	int length = env -> GetArrayLength(env, java_bytes);
-	jbyte* native_bytes = env -> GetByteArrayElements(env, java_bytes);
-	if(length <= 0){
-		return 0;
-	}
-	char* bytes = (char*)malloc(length + 1);
-	memcpy(bytes, native_bytes, length);
-	//add a null-terminator
-	bytes[length] = 0;
+    int length = env -> GetArrayLength(env, java_bytes);
+    jbyte* native_bytes = env -> GetByteArrayElements(env, java_bytes);
+    if(length <= 0){
+        return 0;
+    }
+    char* bytes = (char*)malloc(length + 1);
+    memcpy(bytes, native_bytes, length);
+    //add a null-terminator
+    bytes[length] = 0;
 
-	//0 is a constant for the mode
-	env -> ReleaseByteArrayElements(env, native_bytes, 0);
+    //0 is a constant for the mode
+    env -> ReleaseByteArrayElements(env, native_bytes, 0);
 
-	return bytes;
+    return bytes;
 }
 ```
 
 So `sub_740` is actually defined as something like `char* getBytes(JNIEnv* env, jString s)`
 
-###sub_CA0
+### sub_CA0
 Here is the disassembly of [`sub_CA0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L716)
 
 Only 2 more functions to go! 
 ```C
 void* sub_ca0(JNIEnv* env, jobject context){
-	jclass contextWrapClass = env -> FindClass(env, "android/content/ContextWrapper");
-	jmethodID getPackManID = env -> GetMethodId(env, contextWrapClass, "getPackageManager", "()Landroid/content/pm/PackageManager");
-	if(!getPackManID){
-		return 0;
-	}
-	jobject packageManager = env -> CallObjectMethod(env, context, getPackManID)
-	if(!packMan){
-		return 0;
-	}
-	jmethodID getPackNameId = env -> GetMethodId(env, contextWrapClass, "getPackageName", "()Ljava/lang/String;");
-	if(!getPackNameId){
-		return 0;
-	}
-	jobject packageName = env -> CallObjectMethod(env, context, getPackNameId);
+    jclass contextWrapClass = env -> FindClass(env, "android/content/ContextWrapper");
+    jmethodID getPackManID = env -> GetMethodId(env, contextWrapClass, "getPackageManager", "()Landroid/content/pm/PackageManager");
+    if(!getPackManID){
+        return 0;
+    }
+    jobject packageManager = env -> CallObjectMethod(env, context, getPackManID)
+    if(!packMan){
+        return 0;
+    }
+    jmethodID getPackNameId = env -> GetMethodId(env, contextWrapClass, "getPackageName", "()Ljava/lang/String;");
+    if(!getPackNameId){
+        return 0;
+    }
+    jobject packageName = env -> CallObjectMethod(env, context, getPackNameId);
 
 
-	jclass packageManagerClass = env -> getObjectClass(env, packageManager);
-	jmethodID getPackInfoID = env -> GetMethodId(env, packageManagerClass, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
+    jclass packageManagerClass = env -> getObjectClass(env, packageManager);
+    jmethodID getPackInfoID = env -> GetMethodId(env, packageManagerClass, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
 
-	//the 64 is a constant of the PackageInfo class
-	//PackageInfo.GET_SIGNATURES 
-	//https://developer.android.com/reference/android/content/pm/PackageManager.html#GET_SIGNATURES
-	jobject packageInfo = env -> CallObjectMethod(env, packageManager, getPackInfoID, packageName, 64);
+    //the 64 is a constant of the PackageInfo class
+    //PackageInfo.GET_SIGNATURES 
+    //https://developer.android.com/reference/android/content/pm/PackageManager.html#GET_SIGNATURES
+    jobject packageInfo = env -> CallObjectMethod(env, packageManager, getPackInfoID, packageName, 64);
 
-	jclass packageInfoClass = env -> GetObjectClass(env, packageInfo);
-	jfieldID signaturesId = env -> GetFieldID(env, packageInfoClass, "signatures", "[Landroid/content/pm/Signature;");
-	jobject signatures = env -> GetObjectField(env, packageInfo, signaturesId);
-	jobject signature = GetObjectArrayElement(env, signatures, 0);
+    jclass packageInfoClass = env -> GetObjectClass(env, packageInfo);
+    jfieldID signaturesId = env -> GetFieldID(env, packageInfoClass, "signatures", "[Landroid/content/pm/Signature;");
+    jobject signatures = env -> GetObjectField(env, packageInfo, signaturesId);
+    jobject signature = GetObjectArrayElement(env, signatures, 0);
 
-	jclass signatureClass = env -> GetObjectClass(env, signature);
-	jmethodID toCharsID = env -> GetMethodId(env, signatureClass, "toCharsString", "()Ljava/lang/String;");
-	if(!toCharsID){
-		return 0;
-	}
-	jobject signatureString = env -> CallObjectMethod(env, signature, toCharsID);
-	return signatureString;
+    jclass signatureClass = env -> GetObjectClass(env, signature);
+    jmethodID toCharsID = env -> GetMethodId(env, signatureClass, "toCharsString", "()Ljava/lang/String;");
+    if(!toCharsID){
+        return 0;
+    }
+    jobject signatureString = env -> CallObjectMethod(env, signature, toCharsID);
+    return signatureString;
 }
 ```
 
 So `sub_CA0` returns the android package's signature. Its signature could be rewritten as `jstring getSignature(env, context)`.
 
 
-###sub_13C0
+### sub_13C0
 Here is the disassembly for [`sub_13C0`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L1208)
 
 Alright, last one, it's not too bad. Once again, I'll just rewrite it in C
 ```C
 void * sub_13c0(JNIEnv* env, char* s){
-	jclass cryptoUtilClass = env -> FindClass(env, "io/casper/android/util/CryptoUtil");
-	jmethodID getMD5ID = env -> GetStaticMethodId(env, cryptoUtilClass, "getMD5Hash", "(Ljava/lang/String;)Ljava/lang/String;");
-	if(!getMD5ID){
-		return 0;
-	}
-	jstring s_jstring = env -> NewStringUTF(env, s);
-	jstring md5 = env -> CallStaticObjectMethod(env, cryptoUtilClass, getMD5ID, s_jstring);
-	if(!md5){
-		return 0;
-	}
-	char* md5Bytes = getBytes(env, md5);
-	return md5Bytes;
+    jclass cryptoUtilClass = env -> FindClass(env, "io/casper/android/util/CryptoUtil");
+    jmethodID getMD5ID = env -> GetStaticMethodId(env, cryptoUtilClass, "getMD5Hash", "(Ljava/lang/String;)Ljava/lang/String;");
+    if(!getMD5ID){
+        return 0;
+    }
+    jstring s_jstring = env -> NewStringUTF(env, s);
+    jstring md5 = env -> CallStaticObjectMethod(env, cryptoUtilClass, getMD5ID, s_jstring);
+    if(!md5){
+        return 0;
+    }
+    char* md5Bytes = getBytes(env, md5);
+    return md5Bytes;
 }
 ```
 So this function simply calculates the md5 of the string passed. It's signature would be `char* getMD5(JNIEnv* env, char* s);`
 
-###Back to getVerificationToken
+### Back to getVerificationToken
 Here is the disassembly of [`getVerificationToken`](https://github.com/casperreverser/CasperReverse/blob/master/disassembly.asm#L68)
 
 Now that we have the subroutines translated into C we can start workign on `getVerificationToken`. I've included a table of the subroutines to their C signatures
@@ -553,25 +553,25 @@ Now that we have those, I'll translate the whole of `getVerificationToken` into 
 
 ```C
 char* getVerificationToken(JNIEnv* env, jobject this_Security, jobject context, jstring timestamp_s){
-	jstring packageName_s = getPackageName(env, context);
-	char* packageName = getBytes(env, packageName_s);
+    jstring packageName_s = getPackageName(env, context);
+    char* packageName = getBytes(env, packageName_s);
 
-	jstring signature_s = getSignature(env, context);
-	char* signature = getBytes(env, signature_s);
-	char* timestamp = getBytes(env, timestamp_s);
+    jstring signature_s = getSignature(env, context);
+    char* signature = getBytes(env, signature_s);
+    char* timestamp = getBytes(env, timestamp_s);
 
-	char* signature_md5 = getMD5(env, signature);
+    char* signature_md5 = getMD5(env, signature);
 
-	size_t l_packageName = strlen(packageName);
-	size_t l_signature_md5 = strlen(signature_md5);
-	size_t l_timestamp = strlen(timestamp);
+    size_t l_packageName = strlen(packageName);
+    size_t l_signature_md5 = strlen(signature_md5);
+    size_t l_timestamp = strlen(timestamp);
 
-	char* res = (char*) malloc(l_packageName + l_signature_md5+l_timestamp+3);
-	sprintf(res, "%s|%s|%s", packageName, signature_md5, timestamp);
-	char* res_md5 = getMD5(env, res);
+    char* res = (char*) malloc(l_packageName + l_signature_md5+l_timestamp+3);
+    sprintf(res, "%s|%s|%s", packageName, signature_md5, timestamp);
+    char* res_md5 = getMD5(env, res);
 
-	jstring result = env -> NewStringUTF(env, res_md5);
-	return result;
+    jstring result = env -> NewStringUTF(env, res_md5);
+    return result;
 }
 ```
 
@@ -579,7 +579,7 @@ So this function simply collects data from the subroutines, combines it all toge
 
 But what are the values for `getPackageName` and `getSignature`? `getPackageName` is simple, it just returns `io.casper.android`. `getSignature` is a bit more complex. Every application on an android device has a unique signature. This signature can be obtained by following the calls listed within `sub_CA0` for any package.
 
-#Tying it all Together
+# Tying it all Together
 So what exactly is the flow of this verification? 
 
 Let's say I want to make a login request to the Casper API. I need to gather several parameters to send in my request.
@@ -594,11 +594,11 @@ timestamp|1485664771992 | the current epoch time
 username |myUsername| Your username
 using_root_login|false|
 
-This parameter list must be alphabetized as that's how Casper's API expect's it. 
+This parameter list must be alphabetized as that's how Casper's API expects it. 
 
 Once the parameter list has been built, you must generate your `X-Casper-Private-Token` and `X-Casper-Signature`. This is done by re-creating the `getSignature` and `getPrivateToken` methods written earlier. The calls to `getSecretKey` and `getVerificationToken` must be rewritten as well. 
 
-Once you have these headers, you should modify the others (`X-Casper-Device`, `X-Casper-Device-Info`, `X-Casper-Timestamp`) to suit your request. Finally, you can URL encode the form parameters, and send the request with the Headers to the Casper endpoint. If everything worked you should get a 200 response.
+Once you have these headers, you should modify the others (`X-Casper-Device`, `X-Casper-Device-Info`, `X-Casper-Timestamp`) to suit your request. Finally, you can URL encode the form parameters, and send the request with the Headers to the Casper endpoint. If everything worked you should get a `200` response.
 
 Something to note: in this writeup I changed the values in some of the strings. It is up to you to find these on your own, I will not provide them to anyone under any circumstances. Additionally, I did not detail how to get the signature of Casper, this is also a task left to the reader, all should be fairly easy to accomplish with a little thought.
 
